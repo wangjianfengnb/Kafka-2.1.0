@@ -1,0 +1,39 @@
+Apache Kafka
+Copyright 2018 The Apache Software Foundation.
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+This distribution has a binary dependency on jersey, which is available under the CDDL
+License. The source code of jersey can be found at https://github.com/jersey/jersey/.
+
+
+
+java -Xmx1G -Xms1G -server -XX:+UseG1GC -XX:MaxGCPauseMillis=20 -XX:InitiatingHeapOccupancyPercent=35 -XX:+ExplicitGCInvokesConcurrent
+-Djava.awt.headless=true -Xloggc:/Users/wangjianfeng/workspace/kafka-2.1.0-src/bin/../logs/kafkaServer-gc.log
+-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -XX:+PrintGCTimeStamps -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=10 -XX:GCLogFileSize=100M
+-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false
+-Dkafka.logs.dir=/Users/wangjianfeng/workspace/kafka-2.1.0-src/bin/../logs -Dlog4j.configuration=file:bin/../config/log4j.properties
+-cp /Users/wangjianfeng/workspace/kafka-2.1.0-src/bin/../core/build/dependant-libs-2.11.12/*
+:/Users/wangjianfeng/workspace/kafka-2.1.0-src/bin/../examples/build/libs/kafka-examples-2.1.0.jar
+:/Users/wangjianfeng/workspace/kafka-2.1.0-src/bin/../clients/build/libs/kafka-clients-2.1.0.jar
+:/Users/wangjianfeng/workspace/kafka-2.1.0-src/bin/../streams/build/libs/kafka-streams-2.1.0.jar
+:/Users/wangjianfeng/workspace/kafka-2.1.0-src/bin/../streams/examples/build/libs/kafka-streams-examples-2.1.0.jar
+:/Users/wangjianfeng/workspace/kafka-2.1.0-src/bin/../streams/build/dependant-libs-2.11.12/rocksdbjni-5.14.2.jar
+:/Users/wangjianfeng/workspace/kafka-2.1.0-src/bin/../tools/build/libs/kafka-tools-2.1.0.jar
+:/Users/wangjianfeng/workspace/kafka-2.1.0-src/bin/../tools/build/dependant-libs-2.11.12/*
+:/Users/wangjianfeng/workspace/kafka-2.1.0-src/bin/../connect/api/build/libs/connect-api-2.1.0.jar
+:/Users/wangjianfeng/workspace/kafka-2.1.0-src/bin/../connect/api/build/dependant-libs/*
+:/Users/wangjianfeng/workspace/kafka-2.1.0-src/bin/../connect/transforms/build/libs/connect-transforms-2.1.0.jar
+:/Users/wangjianfeng/workspace/kafka-2.1.0-src/bin/../connect/transforms/build/dependant-libs/*
+:/Users/wangjianfeng/workspace/kafka-2.1.0-src/bin/../connect/runtime/build/libs/connect-runtime-2.1.0.jar
+:/Users/wangjianfeng/workspace/kafka-2.1.0-src/bin/../connect/runtime/build/dependant-libs/*
+:/Users/wangjianfeng/workspace/kafka-2.1.0-src/bin/../connect/file/build/libs/connect-file-2.1.0.jar
+:/Users/wangjianfeng/workspace/kafka-2.1.0-src/bin/../connect/file/build/dependant-libs/*
+:/Users/wangjianfeng/workspace/kafka-2.1.0-src/bin/../connect/json/build/libs/connect-json-2.1.0.jar
+:/Users/wangjianfeng/workspace/kafka-2.1.0-src/bin/../connect/json/build/dependant-libs/*
+:/Users/wangjianfeng/workspace/kafka-2.1.0-src/bin/../connect/basic-auth-extension/build/libs/connect-basic-auth-extension-2.1.0.jar
+:/Users/wangjianfeng/workspace/kafka-2.1.0-src/bin/../connect/basic-auth-extension/build/dependant-libs/*
+:/Users/wangjianfeng/workspace/kafka-2.1.0-src/bin/../core/build/libs/kafka_2.11-2.1.0.jar
+ kafka.Kafka config/server.properties
+
