@@ -77,12 +77,17 @@ object AdminUtils extends Logging with AdminUtilities {
     *
     * 1. 在所有的broker中平均分布replica
     * 2. partitions分配给一个特定的broker，其他replica平均分配给其他broker
-    * 3.
+    * 3. 机架级别，如果broker有机架信息，尽可能partition的replicas分配在不同的机架上
    *
    * To achieve this goal for replica assignment without considering racks, we:
    * 1. Assign the first replica of each partition by round-robin, starting from a random position in the broker list.
    * 2. Assign the remaining replicas of each partition with an increasing shift.
    *
+    *  在不考虑机架的情况下：
+    *
+    *   1. 分配通过round-robin算法分配第一个replica。开始下标为broker list的随机
+    *   2. 分配剩下的replica
+    *
    * Here is an example of assigning
    * broker-0  broker-1  broker-2  broker-3  broker-4
    * p0        p1        p2        p3        p4       (1st replica)

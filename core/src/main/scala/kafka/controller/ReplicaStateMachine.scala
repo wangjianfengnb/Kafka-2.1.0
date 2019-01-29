@@ -79,6 +79,9 @@ class ReplicaStateMachine(config: KafkaConfig,
   /**
    * Invoked on startup of the replica's state machine to set the initial state for replicas of all existing partitions
    * in zookeeper
+    *
+    * 初始化所有的partition的replica状态
+    *
    */
   private def initializeReplicaState() {
     controllerContext.allPartitions.foreach { partition =>
