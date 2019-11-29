@@ -179,10 +179,11 @@ public final class RecordAccumulator {
      * @param headers the Headers for the record
      * @param callback The user-supplied callback to execute when the request is complete
      * @param maxTimeToBlock The maximum time in milliseconds to block for buffer memory to be available
+     *
+     * 这里其实会将数据存进一个Deque里面，然后内存的数据结构为：
+     *            ConcurrentMap<TopicPartition, Deque<ProducerBatch>>
      */
-     // 这里其实会将数据存进一个Deque里面，然后内存的数据结构为：
-     // ConcurrentMap<TopicPartition, Deque<ProducerBatch>>
-    public RecordAppendResult append(TopicPartition tp,
+    public RecordAppendResult  append(TopicPartition tp,
                                      long timestamp,
                                      byte[] key,
                                      byte[] value,
@@ -195,11 +196,13 @@ public final class RecordAccumulator {
         ByteBuffer buffer = null;
         if (headers == null) headers = Record.EMPTY_HEADERS;
         try {
+            // 看看是否已经有一个batch
             // check if we have an in-progress batch
             Deque<ProducerBatch> dq = getOrCreateDeque(tp);
             synchronized (dq) {
                 if (closed)
                     throw new KafkaException("Producer closed while send in progress");
+                // 尝试追加消息进去这个队列，默认情况下为空
                 RecordAppendResult appendResult = tryAppend(timestamp, key, value, headers, callback, dq);
                 if (appendResult != null)
                     return appendResult;
@@ -207,14 +210,18 @@ public final class RecordAccumulator {
 
             // we don't have an in-progress record batch try to allocate a new batch
             byte maxUsableMagic = apiVersions.maxUsableProduceMagic();
+            // 估计这条消息的大小
             int size = Math.max(this.batchSize, AbstractRecords.estimateSizeInBytesUpperBound(maxUsableMagic, compression, key, value, headers));
             log.trace("Allocating a new {} byte message buffer for topic {} partition {}", size, tp.topic(), tp.partition());
+
+            // 向bufferPool申请一个buffer
             buffer = free.allocate(size, maxTimeToBlock);
             synchronized (dq) {
                 // Need to check if producer is closed again after grabbing the dequeue lock.
                 if (closed)
                     throw new KafkaException("Producer closed while send in progress");
 
+                // 进入锁块：先检查一下是否有 存在的batch。并发情况下有可能会成功创建了一个batch
                 RecordAppendResult appendResult = tryAppend(timestamp, key, value, headers, callback, dq);
                 if (appendResult != null) {
                     // Somebody else found us a batch, return the one we waited for! Hopefully this doesn't happen often...
@@ -222,10 +229,14 @@ public final class RecordAccumulator {
                 }
 
                 MemoryRecordsBuilder recordsBuilder = recordsBuilder(buffer, maxUsableMagic);
+                // 构建一个batch
                 ProducerBatch batch = new ProducerBatch(tp, recordsBuilder, time.milliseconds());
                 FutureRecordMetadata future = Utils.notNull(batch.tryAppend(timestamp, key, value, headers, callback, time.milliseconds()));
 
+                // 将这个batch加入deque中
                 dq.addLast(batch);
+
+                // 记录未完成的batch
                 incomplete.add(batch);
 
                 // Don't deallocate this buffer in the finally block as it's being used in the record batch
@@ -233,6 +244,7 @@ public final class RecordAccumulator {
                 return new RecordAppendResult(future, dq.size() > 1 || batch.isFull(), true);
             }
         } finally {
+            // 释放内存
             if (buffer != null)
                 free.deallocate(buffer);
             appendsInProgress.decrementAndGet();
@@ -449,7 +461,6 @@ public final class RecordAccumulator {
             TopicPartition part = entry.getKey();
             Deque<ProducerBatch> deque = entry.getValue();
 
-            // 如果没有猜错，这里的leader是空的
             Node leader = cluster.leaderFor(part);
             synchronized (deque) {
                 if (leader == null && !deque.isEmpty()) {

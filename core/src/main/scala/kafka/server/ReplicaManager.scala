@@ -423,6 +423,8 @@ class ReplicaManager(val config: KafkaConfig,
 
       case None if metadataCache.contains(topicPartition) =>
         if (expectLeader) {
+
+          // 如果本broker找不到leader，就会让客户端刷新元数据然后找其他broker
           // The topic exists, but this broker is no longer a replica of it, so we return NOT_LEADER which
           // forces clients to refresh metadata to find the new location. This can happen, for example,
           // during a partition reassignment if a produce request from the client is sent to a broker after
@@ -475,6 +477,7 @@ class ReplicaManager(val config: KafkaConfig,
                     responseCallback: Map[TopicPartition, PartitionResponse] => Unit,
                     delayedProduceLock: Option[Lock] = None,
                     recordConversionStatsCallback: Map[TopicPartition, RecordConversionStats] => Unit = _ => ()) {
+    // 判断ack是否有效
     if (isValidRequiredAcks(requiredAcks)) {
       val sTime = time.milliseconds
       // 先把消息刷到本地去
@@ -737,6 +740,7 @@ class ReplicaManager(val config: KafkaConfig,
   }
 
   /**
+    * 把消息追加到日志中
    * Append the messages to the local replica logs
    */
   private def appendToLocalLog(internalTopicsAllowed: Boolean,

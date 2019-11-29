@@ -308,17 +308,21 @@ public class Sender implements Runnable {
             }
         }
 
+        // 最底层是将请求封住成为一个Send对象，然后设置到KafkaChannel中
         long pollTimeout = sendProducerData(now);
         client.poll(pollTimeout, now);
     }
 
     private long sendProducerData(long now) {
         Cluster cluster = metadata.fetch();
+
+        // 获取哪些准备发送出去的数据
         // get the list of partitions with data ready to send
         RecordAccumulator.ReadyCheckResult result = this.accumulator.ready(cluster, now);
 
         // if there are any partitions whose leaders are not known yet, force metadata update
         if (!result.unknownLeaderTopics.isEmpty()) {
+            // 如果有些topic的leader不知道，去请求元数据更新
             // The set of topics with unknown leader contains topics with leader election pending as well as
             // topics which may have expired. Add the topic again to metadata to ensure it is included
             // and request metadata update, since there are messages to send to the topic.
@@ -331,6 +335,7 @@ public class Sender implements Runnable {
         }
 
         // remove any nodes we aren't ready to send to
+        // 移除哪些还没有建立连接的数据
         Iterator<Node> iter = result.readyNodes.iterator();
         long notReadyTimeout = Long.MAX_VALUE;
         while (iter.hasNext()) {
@@ -341,6 +346,7 @@ public class Sender implements Runnable {
             }
         }
 
+        // 创建发送数据的请求
         // create produce requests
         Map<Integer, List<ProducerBatch>> batches = this.accumulator.drain(cluster, result.readyNodes, this.maxRequestSize, now);
         addToInflightBatches(batches);
@@ -389,6 +395,7 @@ public class Sender implements Runnable {
             // otherwise the select time will be the time difference between now and the metadata expiry time;
             pollTimeout = 0;
         }
+        // 把请求真正发送出去
         sendProduceRequests(batches, now);
         return pollTimeout;
     }
@@ -791,6 +798,8 @@ public class Sender implements Runnable {
         String nodeId = Integer.toString(destination);
         ClientRequest clientRequest = client.newClientRequest(nodeId, requestBuilder, now, acks != 0,
                 requestTimeoutMs, callback);
+
+        // 真正发送数据
         client.send(clientRequest, now);
         log.trace("Sent produce request to {}: {}", nodeId, requestBuilder);
     }

@@ -45,12 +45,18 @@ public class BufferPool {
 
     static final String WAIT_TIME_SENSOR_NAME = "bufferpool-wait-time";
 
+    // 默认 32MB
     private final long totalMemory;
+
+    // 一个batch的大小：16kb
     private final int poolableSize;
     private final ReentrantLock lock;
     private final Deque<ByteBuffer> free;
     private final Deque<Condition> waiters;
-    /** Total available memory is the sum of nonPooledAvailableMemory and the number of byte buffers in free * poolableSize.  */
+    /**
+     * Total available memory is the sum of nonPooledAvailableMemory and the number of byte buffers in free *
+     * poolableSize.
+     */
     private long nonPooledAvailableMemory;
     private final Metrics metrics;
     private final Time time;
@@ -59,10 +65,10 @@ public class BufferPool {
     /**
      * Create a new buffer pool
      *
-     * @param memory The maximum amount of memory that this buffer pool can allocate
-     * @param poolableSize The buffer size to cache in the free list rather than deallocating
-     * @param metrics instance of Metrics
-     * @param time time instance
+     * @param memory        The maximum amount of memory that this buffer pool can allocate
+     * @param poolableSize  The buffer size to cache in the free list rather than deallocating
+     * @param metrics       instance of Metrics
+     * @param time          time instance
      * @param metricGrpName logical group name for metrics
      */
     public BufferPool(long memory, int poolableSize, Metrics metrics, Time time, String metricGrpName) {
@@ -76,11 +82,11 @@ public class BufferPool {
         this.time = time;
         this.waitTime = this.metrics.sensor(WAIT_TIME_SENSOR_NAME);
         MetricName rateMetricName = metrics.metricName("bufferpool-wait-ratio",
-                                                   metricGrpName,
-                                                   "The fraction of time an appender waits for space allocation.");
+                metricGrpName,
+                "The fraction of time an appender waits for space allocation.");
         MetricName totalMetricName = metrics.metricName("bufferpool-wait-time-total",
-                                                   metricGrpName,
-                                                   "The total time an appender waits for space allocation.");
+                metricGrpName,
+                "The total time an appender waits for space allocation.");
         this.waitTime.add(new Meter(TimeUnit.NANOSECONDS, rateMetricName, totalMetricName));
     }
 
@@ -88,33 +94,42 @@ public class BufferPool {
      * Allocate a buffer of the given size. This method blocks if there is not enough memory and the buffer pool
      * is configured with blocking mode.
      *
-     * @param size The buffer size to allocate in bytes
+     * @param size             The buffer size to allocate in bytes
      * @param maxTimeToBlockMs The maximum time in milliseconds to block for buffer memory to be available
      * @return The buffer
-     * @throws InterruptedException If the thread is interrupted while blocked
-     * @throws IllegalArgumentException if size is larger than the total memory controlled by the pool (and hence we would block
-     *         forever)
+     * @throws InterruptedException     If the thread is interrupted while blocked
+     * @throws IllegalArgumentException if size is larger than the total memory controlled by the pool (and hence we
+     * would block
+     *                                  forever)
      */
     public ByteBuffer allocate(int size, long maxTimeToBlockMs) throws InterruptedException {
         if (size > this.totalMemory)
             throw new IllegalArgumentException("Attempt to allocate " + size
-                                               + " bytes, but there is a hard limit of "
-                                               + this.totalMemory
-                                               + " on memory allocations.");
+                    + " bytes, but there is a hard limit of "
+                    + this.totalMemory
+                    + " on memory allocations.");
 
         ByteBuffer buffer = null;
         this.lock.lock();
         try {
             // check if we have a free buffer of the right size pooled
+
+            // 如过申请的大小刚好和一个bytebuffer大小一致，同时空闲的buffer中还有，则直接取出来
             if (size == poolableSize && !this.free.isEmpty())
                 return this.free.pollFirst();
 
             // now check if the request is immediately satisfiable with the
             // memory on hand or if we need to block
+            // 判断请求的内存大小是否足够
+
+            // 总的已经申请的buffer
             int freeListSize = freeSize() * this.poolableSize;
+
+            // 没有被申请的空间 + 缓存的空间 >= 需要申请的空间
             if (this.nonPooledAvailableMemory + freeListSize >= size) {
                 // we have enough unallocated or pooled memory to immediately
                 // satisfy the request, but need to allocate the buffer
+                // 有足够的空间，确保nonPooledAvailableMemory > size . 如果不够，则释放free队列里面的内存。
                 freeUp(size);
                 this.nonPooledAvailableMemory -= size;
             } else {
@@ -139,7 +154,8 @@ public class BufferPool {
                         }
 
                         if (waitingTimeElapsed) {
-                            throw new TimeoutException("Failed to allocate memory within the configured max blocking time " + maxTimeToBlockMs + " ms.");
+                            throw new TimeoutException("Failed to allocate memory within the configured max blocking " +
+                                    "time " + maxTimeToBlockMs + " ms.");
                         }
 
                         remainingTimeToBlockNs -= timeNs;
@@ -204,6 +220,7 @@ public class BufferPool {
             if (error) {
                 this.lock.lock();
                 try {
+                    // 如果申请失败，恢复记录
                     this.nonPooledAvailableMemory += size;
                     if (!this.waiters.isEmpty())
                         this.waiters.peekFirst().signal();
@@ -233,8 +250,8 @@ public class BufferPool {
      * memory as free.
      *
      * @param buffer The buffer to return
-     * @param size The size of the buffer to mark as deallocated, note that this may be smaller than buffer.capacity
-     *             since the buffer may re-allocate itself during in-place compression
+     * @param size   The size of the buffer to mark as deallocated, note that this may be smaller than buffer.capacity
+     *               since the buffer may re-allocate itself during in-place compression
      */
     public void deallocate(ByteBuffer buffer, int size) {
         lock.lock();

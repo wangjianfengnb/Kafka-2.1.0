@@ -103,9 +103,12 @@ class KafkaApis(val requestChannel: RequestChannel,
       trace(s"Handling request:${request.requestDesc(true)} from connection ${request.context.connectionId};" +
         s"securityProtocol:${request.context.securityProtocol},principal:${request.context.principal}")
       request.header.apiKey match {
+          // 生产消息
         case ApiKeys.PRODUCE => handleProduceRequest(request)
         case ApiKeys.FETCH => handleFetchRequest(request)
         case ApiKeys.LIST_OFFSETS => handleListOffsetRequest(request)
+
+          // 抓取元数据
         case ApiKeys.METADATA => handleTopicMetadataRequest(request)
 
           // 这里controller选举成功后，更新元数据，会发送一个LeaderAndISR的请求
@@ -411,7 +414,7 @@ class KafkaApis(val requestChannel: RequestChannel,
     }
 
 
-    // 这里定义了一个返回相应的function
+    // 这里定义了一个返回响应的callback
     // the callback for sending a produce response
     def sendResponseCallback(responseStatus: Map[TopicPartition, PartitionResponse]) {
       val mergedResponseStatus = responseStatus ++ unauthorizedTopicResponses ++ nonExistingTopicResponses
@@ -445,6 +448,7 @@ class KafkaApis(val requestChannel: RequestChannel,
         }
       }
 
+      // 如果ack设置为0，马上返回响应
       // Send the response immediately. In case of throttling, the channel has already been muted.
       if (produceRequest.acks == 0) {
         // no operation needed if producer request.required.acks = 0; however, if there is any error in handling

@@ -635,6 +635,7 @@ class Partition(val topicPartition: TopicPartition,
 
   def maybeShrinkIsr(replicaMaxLagTimeMs: Long) {
     val leaderHWIncremented = inWriteLock(leaderIsrUpdateLock) {
+      // 如果本地是leader，则判断是否收缩isr
       leaderReplicaIfLocal match {
         case Some(leaderReplica) =>
           val outOfSyncReplicas = getOutOfSyncReplicas(leaderReplica, replicaMaxLagTimeMs)
@@ -644,10 +645,12 @@ class Partition(val topicPartition: TopicPartition,
             info("Shrinking ISR from %s to %s".format(inSyncReplicas.map(_.brokerId).mkString(","),
               newInSyncReplicas.map(_.brokerId).mkString(",")))
             // update ISR in zk and in cache
+            // 更新ISR列表
             updateIsr(newInSyncReplicas)
             // we may need to increment high watermark since ISR could be down to 1
 
             replicaManager.isrShrinkRate.mark()
+            // 更新高水位
             maybeIncrementLeaderHW(leaderReplica)
           } else {
             false
@@ -684,8 +687,8 @@ class Partition(val topicPartition: TopicPartition,
       // 首先排除掉leaderReplica
     val candidateReplicas = inSyncReplicas - leaderReplica
 
+    // 计算哪些
     val laggingReplicas = candidateReplicas.filter(r =>
-
       // 如果messageOffset不相等并且lastCaughtUpTimeMs超过了maxLagMs，则认为需要移除
       r.logEndOffset.messageOffset != leaderReplica.logEndOffset.messageOffset && (time.milliseconds - r.lastCaughtUpTimeMs) > maxLagMs)
     if (laggingReplicas.nonEmpty)

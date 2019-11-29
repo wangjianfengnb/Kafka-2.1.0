@@ -98,6 +98,7 @@ class AdminManager(val config: KafkaConfig,
               (partitionId.intValue, replicas.asScala.map(_.intValue))
             }
           } else
+            // 这里为topic分配partition
             AdminUtils.assignReplicasToBrokers(brokers, arguments.numPartitions, arguments.replicationFactor)
         }
         trace(s"Assignments for topic $topic are $assignments ")
@@ -123,6 +124,7 @@ class AdminManager(val config: KafkaConfig,
             if (validateOnly)
               adminZkClient.validateCreateOrUpdateTopic(topic, assignments, configs, update = false)
             else
+              // 创建topic 写到zk中
               adminZkClient.createOrUpdateTopicPartitionAssignmentPathInZK(topic, assignments, configs, update = false)
         }
         CreatePartitionsMetadata(topic, assignments, ApiError.NONE)

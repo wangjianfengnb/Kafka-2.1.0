@@ -42,7 +42,7 @@ import java.util.Set;
  * A class encapsulating some of the logic around metadata.
  * <p>
  * This class is shared by the client thread (for partitioning) and the background sender thread.
- *
+ * <p>
  * Metadata is maintained for only a subset of topics, which can be added to over time. When we request metadata for a
  * topic we don't have any metadata for it will trigger a metadata update.
  * <p>
@@ -80,12 +80,14 @@ public class Metadata implements Closeable {
 
     /**
      * Create a new Metadata instance
-     * @param refreshBackoffMs The minimum amount of time that must expire between metadata refreshes to avoid busy
-     *        polling
-     * @param metadataExpireMs The maximum amount of time that metadata can be retained without refresh
-     * @param allowAutoTopicCreation If this and the broker config 'auto.create.topics.enable' are true, topics that
-     *                               don't exist will be created by the broker when a metadata request is sent
-     * @param topicExpiryEnabled If true, enable expiry of unused topics
+     *
+     * @param refreshBackoffMs         The minimum amount of time that must expire between metadata refreshes to
+     *                                 avoid busy
+     *                                 polling
+     * @param metadataExpireMs         The maximum amount of time that metadata can be retained without refresh
+     * @param allowAutoTopicCreation   If this and the broker config 'auto.create.topics.enable' are true, topics that
+     *                                 don't exist will be created by the broker when a metadata request is sent
+     * @param topicExpiryEnabled       If true, enable expiry of unused topics
      * @param clusterResourceListeners List of ClusterResourceListeners which will receive metadata updates.
      */
     public Metadata(long refreshBackoffMs, long metadataExpireMs, boolean allowAutoTopicCreation,
@@ -157,6 +159,7 @@ public class Metadata implements Closeable {
 
     /**
      * Check whether an update has been explicitly requested.
+     *
      * @return true if an update was requested, false otherwise
      */
     public synchronized boolean updateRequested() {
@@ -190,6 +193,7 @@ public class Metadata implements Closeable {
             if (ex != null)
                 throw ex;
             if (remainingWaitMs != 0)
+                // 调用wait()方法阻塞等待元数据
                 wait(remainingWaitMs);
             long elapsed = System.currentTimeMillis() - begin;
             if (elapsed >= maxWaitMs)
@@ -204,6 +208,7 @@ public class Metadata implements Closeable {
      * Replace the current set of topics maintained to the one provided.
      * If topic expiry is enabled, expiry time of the topics will be
      * reset on the next update.
+     *
      * @param topics
      */
     public synchronized void setTopics(Collection<String> topics) {
@@ -224,6 +229,7 @@ public class Metadata implements Closeable {
 
     /**
      * Check if a topic is already in the topic set.
+     *
      * @param topic topic to check
      * @return true if the topic exists, false otherwise
      */
@@ -235,10 +241,10 @@ public class Metadata implements Closeable {
      * Updates the cluster metadata. If topic expiry is enabled, expiry time
      * is set for topics if required and expired topics are removed from the metadata.
      *
-     * @param newCluster the cluster containing metadata for topics with valid metadata
+     * @param newCluster        the cluster containing metadata for topics with valid metadata
      * @param unavailableTopics topics which are non-existent or have one or more partitions whose
-     *        leader is not known
-     * @param now current time in milliseconds
+     *                          leader is not known
+     * @param now               current time in milliseconds
      */
     public synchronized void update(Cluster newCluster, Set<String> unavailableTopics, long now) {
         Objects.requireNonNull(newCluster, "cluster should not be null");
@@ -259,12 +265,13 @@ public class Metadata implements Closeable {
                     entry.setValue(now + TOPIC_EXPIRY_MS);
                 else if (expireMs <= now) {
                     it.remove();
-                    log.debug("Removing unused topic {} from the metadata list, expiryMs {} now {}", entry.getKey(), expireMs, now);
+                    log.debug("Removing unused topic {} from the metadata list, expiryMs {} now {}", entry.getKey(),
+                            expireMs, now);
                 }
             }
         }
 
-        for (Listener listener: listeners)
+        for (Listener listener : listeners)
             listener.onMetadataUpdate(newCluster, unavailableTopics);
 
         String previousClusterId = cluster.clusterResource().clusterId();
@@ -321,6 +328,7 @@ public class Metadata implements Closeable {
 
     /**
      * Set state to indicate if metadata for all topics in Kafka cluster is required or not.
+     *
      * @param needMetadataForAllTopics boolean indicating need for metadata of all topics in cluster.
      */
     public synchronized void needMetadataForAllTopics(boolean needMetadataForAllTopics) {
@@ -364,6 +372,7 @@ public class Metadata implements Closeable {
 
     /**
      * Check if this metadata instance has been closed. See {@link #close()} for more information.
+     *
      * @return True if this instance has been closed; false otherwise
      */
     public synchronized boolean isClosed() {
@@ -377,9 +386,9 @@ public class Metadata implements Closeable {
         /**
          * Callback invoked on metadata update.
          *
-         * @param cluster the cluster containing metadata for topics with valid metadata
+         * @param cluster           the cluster containing metadata for topics with valid metadata
          * @param unavailableTopics topics which are non-existent or have one or more partitions whose
-         *        leader is not known
+         *                          leader is not known
          */
         void onMetadataUpdate(Cluster cluster, Set<String> unavailableTopics);
     }
@@ -414,8 +423,9 @@ public class Metadata implements Closeable {
                 }
             }
             nodes = cluster.nodes();
-            controller  = cluster.controller();
+            controller = cluster.controller();
         }
-        return new Cluster(clusterId, nodes, partitionInfos, unauthorizedTopics, invalidTopics, internalTopics, controller);
+        return new Cluster(clusterId, nodes, partitionInfos, unauthorizedTopics, invalidTopics, internalTopics,
+                controller);
     }
 }

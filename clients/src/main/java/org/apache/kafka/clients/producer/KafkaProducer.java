@@ -929,7 +929,11 @@ public class KafkaProducer<K, V> implements Producer<K, V> {
                         " to class " + producerConfig.getClass(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG).getName() +
                         " specified in value.serializer", cce);
             }
+
+            // 对record进行分区
             int partition = partition(record, serializedKey, serializedValue, cluster);
+
+            // 指定 topic -> partition
             tp = new TopicPartition(record.topic(), partition);
 
             setReadOnly(record.headers());
@@ -1022,9 +1026,15 @@ public class KafkaProducer<K, V> implements Producer<K, V> {
         do {
             log.trace("Requesting metadata update for topic {}.", topic);
             metadata.add(topic);
+
+            // 设置一个标志位
             int version = metadata.requestUpdate();
+
+            // 唤醒sender线程，让他去负责抓取元数据回来
             sender.wakeup();
             try {
+
+                // 这里被阻塞住
                 metadata.awaitUpdate(version, remainingWaitMs);
             } catch (TimeoutException ex) {
                 // Rethrow with original maxWaitMs to prevent logging exception with remainingWaitMs

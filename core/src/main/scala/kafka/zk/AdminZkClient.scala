@@ -151,6 +151,7 @@ class AdminZkClient(zkClient: KafkaZkClient) extends Logging {
     try {
       val assignment = replicaAssignment.map { case (partitionId, replicas) => (new TopicPartition(topic,partitionId), replicas) }.toMap
 
+      // 这里创建topic完毕后，在
       if (!update) {
         info("Topic creation " + assignment)
         zkClient.createTopicAssignment(topic, assignment)

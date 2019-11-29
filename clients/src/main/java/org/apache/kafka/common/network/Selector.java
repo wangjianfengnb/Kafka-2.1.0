@@ -396,6 +396,8 @@ public class Selector implements Selectable, AutoCloseable {
      * Do whatever I/O can be done on each connection without blocking. This includes completing connections, completing
      * disconnections, initiating new sends, or making progress on in-progress sends or receives.
      *
+     * 对每个链接做IO操作，是非阻塞的。包括，完成连接、断开连接、初始化新的发送请求，或者发送请求和接受请求
+     *
      * When this call is completed the user can check for completed sends, receives, connections or disconnects using
      * {@link #completedSends()}, {@link #completedReceives()}, {@link #connected()}, {@link #disconnected()}. These
      * lists will be cleared at the beginning of each `poll` call and repopulated by the call if there is
@@ -526,6 +528,7 @@ public class Selector implements Selectable, AutoCloseable {
                     }
                 }
 
+
                 /* if channel is not ready finish prepare */
                 if (channel.isConnected() && !channel.ready()) {
                     try {
@@ -538,6 +541,7 @@ public class Selector implements Selectable, AutoCloseable {
                         sensors.successfulAuthentication.record();
                 }
 
+                // 尝试接受消息
                 attemptRead(key, channel);
 
                 if (channel.hasBytesBuffered()) {
@@ -549,7 +553,7 @@ public class Selector implements Selectable, AutoCloseable {
                     //cleared to avoid the overhead of checking every time.
                     keysWithBufferedRead.add(key);
                 }
-
+                // 写数据
                 /* if channel is ready write to any sockets that have space in their buffer and for which we have data */
                 if (channel.ready() && key.isWritable()) {
                     Send send;

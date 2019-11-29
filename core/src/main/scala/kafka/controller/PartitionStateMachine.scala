@@ -31,6 +31,7 @@ import scala.collection.mutable
 
 
 /**
+  * Partition状态机，维护partition的状态
  * This class represents the state machine for partitions. It defines the states that a partition can be in, and
  * transitions to move the partition to another legal state. The different states that a partition can be in are -
  * 1. NonExistentPartition: This state indicates that the partition was either never created or was created and then
