@@ -1180,6 +1180,7 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
                         return ConsumerRecords.empty();
                     }
                 } else {
+                    // 更新partition的分配，猜测这里应该会选举出来一个Coordinate出来，然后为每个consumer分配partition
                     while (!updateAssignmentMetadataIfNeeded(time.timer(Long.MAX_VALUE))) {
                         log.warn("Still waiting for metadata");
                     }

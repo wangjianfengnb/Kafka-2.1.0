@@ -313,6 +313,8 @@ public final class ConsumerCoordinator extends AbstractCoordinator {
             // Always update the heartbeat last poll time so that the heartbeat thread does not leave the
             // group proactively due to application inactivity even if (say) the coordinator cannot be found.
             pollHeartbeat(timer.currentTimeMs());
+
+            // 这里会确保coordinator已经成功选举出来了
             if (coordinatorUnknown() && !ensureCoordinatorReady(timer)) {
                 return false;
             }
@@ -351,6 +353,7 @@ public final class ConsumerCoordinator extends AbstractCoordinator {
             // When group management is used, metadata wait is already performed for this scenario as
             // coordinator is unknown, hence this check is not required.
             if (metadata.updateRequested() && !client.hasReadyNodes(timer.currentTimeMs())) {
+                client.awaitMetadataUpdate(timer);
                 client.awaitMetadataUpdate(timer);
             }
         }

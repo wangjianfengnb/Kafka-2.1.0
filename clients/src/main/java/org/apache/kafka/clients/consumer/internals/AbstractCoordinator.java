@@ -227,7 +227,12 @@ public abstract class AbstractCoordinator implements Closeable {
             return true;
 
         do {
+            // 构造一个获取coordinator的请求
             final RequestFuture<Void> future = lookupCoordinator();
+
+            // 这里会一直while循环一直等到coordinator选举出来
+            // 这个过程会发送一个Fetching API versions请求，获取到api版本，然后发送一个Sending metadata request请求更新元数据，获取到clusterID
+            // 最后得到响应
             client.poll(future, timer);
 
             if (!future.isDone()) {

@@ -106,6 +106,8 @@ class KafkaApis(val requestChannel: RequestChannel,
           // 生产消息
         case ApiKeys.PRODUCE => handleProduceRequest(request)
         case ApiKeys.FETCH => handleFetchRequest(request)
+
+          // consumer 启动的时候获取offset， timestamp = -2 表示ealiest
         case ApiKeys.LIST_OFFSETS => handleListOffsetRequest(request)
 
           // 抓取元数据
@@ -117,8 +119,13 @@ class KafkaApis(val requestChannel: RequestChannel,
         case ApiKeys.UPDATE_METADATA => handleUpdateMetadataRequest(request)
         case ApiKeys.CONTROLLED_SHUTDOWN => handleControlledShutdownRequest(request)
         case ApiKeys.OFFSET_COMMIT => handleOffsetCommitRequest(request)
+
+        // consumer启动的时候会先从这里获取offset，也就是从consumer gourp的元数据。
         case ApiKeys.OFFSET_FETCH => handleOffsetFetchRequest(request)
         case ApiKeys.FIND_COORDINATOR => handleFindCoordinatorRequest(request)
+
+
+          // 消费者加入GROUP
         case ApiKeys.JOIN_GROUP => handleJoinGroupRequest(request)
         case ApiKeys.HEARTBEAT => handleHeartbeatRequest(request)
         case ApiKeys.LEAVE_GROUP => handleLeaveGroupRequest(request)
@@ -891,6 +898,7 @@ class KafkaApis(val requestChannel: RequestChannel,
     if (topic == null)
       throw new IllegalArgumentException("topic must not be null")
 
+    // 取到所有的brokers
     val aliveBrokers = metadataCache.getAliveBrokers
 
     topic match {
@@ -902,6 +910,7 @@ class KafkaApis(val requestChannel: RequestChannel,
             s"and not all brokers are up yet.")
           new MetadataResponse.TopicMetadata(Errors.COORDINATOR_NOT_AVAILABLE, topic, true, java.util.Collections.emptyList())
         } else {
+          // 创建__consumer_offset ,partition = 50 , replicat factor = 3
           createTopic(topic, config.offsetsTopicPartitions, config.offsetsTopicReplicationFactor.toInt,
             groupCoordinator.offsetsTopicConfigs)
         }
@@ -1122,6 +1131,7 @@ class KafkaApis(val requestChannel: RequestChannel,
       // get metadata (and create the topic if necessary)
       val (partition, topicMetadata) = findCoordinatorRequest.coordinatorType match {
         case FindCoordinatorRequest.CoordinatorType.GROUP =>
+          // 取到根据group hashcode 对这个group用__consumer_offsets__的partition数量50取模
           val partition = groupCoordinator.partitionFor(findCoordinatorRequest.coordinatorKey)
           val metadata = getOrCreateInternalTopic(GROUP_METADATA_TOPIC_NAME, request.context.listenerName)
           (partition, metadata)

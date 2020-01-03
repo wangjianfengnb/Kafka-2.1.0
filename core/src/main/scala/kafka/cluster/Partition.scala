@@ -840,6 +840,7 @@ class Partition(val topicPartition: TopicPartition,
         timestamp == ListOffsetRequest.EARLIEST_TIMESTAMP || timestampOffset.offset < lastFetchableOffset
 
       val fetchedOffset = logManager.getLog(topicPartition).flatMap { log =>
+        // 这里根据时间戳-2，抓取到的数据为第一条数据
         log.fetchOffsetsByTimestamp(timestamp)
       }
 
